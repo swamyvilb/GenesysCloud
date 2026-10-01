@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Northfield CRM — Agent Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1C30;
+    --navy:#132A4A;
+    --navy-soft:#1C3A61;
+    --teal:#1B9AA0;
+    --teal-dark:#147177;
+    --amber:#D98E29;
+    --danger:#C94C4C;
+    --success:#2E8F5E;
+    --bg:#F4F7FA;
+    --panel:#FFFFFF;
+    --line:#DDE4EA;
+    --text:#152233;
+    --text-soft:#5B6B7D;
+    --text-faint:#8D9AA8;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    font-family:'IBM Plex Sans', system-ui, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:14px;
+    line-height:1.45;
+  }
+  button{ font-family:inherit; cursor:pointer; }
+  :focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
+
+  /* ---------- shell ---------- */
+  .shell{
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    min-height:560px;
+  }
+
+  /* ---------- status bar ---------- */
+  .statusbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding:10px 18px;
+    background:var(--ink);
+    color:#fff;
+    flex-shrink:0;
+  }
+  .statusbar .left{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-height:24px;
+  }
+  .pulse-dot{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--text-faint);
+    flex-shrink:0;
+  }
+  .pulse-dot.live{
+    background:var(--success);
+    box-shadow:0 0 0 0 rgba(46,143,94,.6);
+    animation:pulse 1.6s infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(46,143,94,.55); }
+    70%{ box-shadow:0 0 0 7px rgba(46,143,94,0); }
+    100%{ box-shadow:0 0 0 0 rgba(46,143,94,0); }
+  }
+  .status-text{ font-size:13px; color:#C9D4E0; }
+  .status-text strong{ color:#fff; font-weight:600; }
+  .statusbar .meta{
+    display:flex; gap:18px; font-size:12.5px; color:#9FB0C2;
+  }
+  .statusbar .meta span b{ color:#E4EAF0; font-weight:600; }
+  .sim-btn{
+    border:1px solid #2E4A6E;
+    background:#1A3357;
+    color:#D9E4EF;
+    padding:7px 14px;
+    border-radius:6px;
+    font-size:12.5px;
+    font-weight:500;
+    transition:background .15s ease;
+  }
+  .sim-btn:hover{ background:#234774; }
+  .sim-btn:active{ transform:translateY(1px); }
+
+  /* ---------- main layout ---------- */
+  .main{
+    flex:1;
+    display:flex;
+    overflow:hidden;
+  }
+
+  /* ---------- customer panel ---------- */
+  .customer-panel{
+    width:260px;
+    flex-shrink:0;
+    background:linear-gradient(180deg,var(--navy),var(--navy-soft));
+    color:#fff;
+    padding:22px 20px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+  }
+  .empty-state{
+    margin-top:40px;
+    text-align:center;
+    color:#A9BCD2;
+    padding:0 8px;
+  }
+  .empty-state .glyph{
+    width:44px;height:44px;margin:0 auto 14px;
+    border:1.5px dashed #41608A;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;color:#6D8AAE;
+  }
+  .empty-state p{ font-size:13px; line-height:1.5; }
+
+  .avatar{
+    width:52px; height:52px;
+    border-radius:10px;
+    background:var(--teal);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:600; font-size:18px; letter-spacing:.5px;
+    margin-bottom:14px;
+    flex-shrink:0;
+  }
+  .cust-name{ font-size:17px; font-weight:600; margin:0 0 2px; }
+  .cust-sub{ font-size:12.5px; color:#A9BCD2; margin:0 0 16px; }
+
+  .tier-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-size:11.5px;
+    font-weight:600;
+    padding:4px 9px;
+    border-radius:20px;
+    margin-bottom:18px;
+    width:fit-content;
+  }
+  .tier-gold{ background:rgba(217,142,41,.18); color:#F0C178; border:1px solid rgba(217,142,41,.4); }
+
+  .field-list{ display:flex; flex-direction:column; gap:12px; margin-bottom:20px; }
+  .field-list .field label{
+    display:block; font-size:11px; color:#7E95B2; margin-bottom:2px;
+  }
+  .field-list .field .val{ font-size:13px; color:#EDF1F6; font-weight:500; }
+
+  .divider{ height:1px; background:#2B4A72; margin:4px 0 18px; }
+
+  .quick-actions{ margin-top:auto; display:flex; flex-direction:column; gap:8px; }
+  .qa-label{ font-size:11px; color:#7E95B2; margin-bottom:4px; }
+  .qa-btn{
+    display:flex; align-items:center; gap:9px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.1);
+    color:#EDF1F6;
+    padding:9px 11px;
+    border-radius:7px;
+    font-size:12.5px;
+    font-weight:500;
+    text-align:left;
+    transition:background .15s ease;
+  }
+  .qa-btn:hover{ background:rgba(255,255,255,.12); }
+  .qa-icon{ font-size:14px; width:16px; text-align:center; flex-shrink:0; }
+
+  /* ---------- content ---------- */
+  .content{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    min-width:0;
+  }
+  .tabs{
+    display:flex;
+    gap:4px;
+    padding:0 20px;
+    border-bottom:1px solid var(--line);
+    background:var(--panel);
+    flex-shrink:0;
+  }
+  .tab{
+    background:none; border:none;
+    padding:13px 14px 11px;
+    font-size:13.5px; font-weight:500;
+    color:var(--text-soft);
+    border-bottom:2px solid transparent;
+    transition:color .15s ease;
+  }
+  .tab:hover{ color:var(--text); }
+  .tab.active{ color:var(--ink); border-bottom-color:var(--teal); font-weight:600; }
+
+  .panel-body{
+    flex:1;
+    overflow-y:auto;
+    padding:22px 26px 40px;
+  }
+  .panel-body.hidden{ display:none; }
+
+  h2.section-title{
+    font-size:15px; font-weight:600; margin:0 0 14px;
+  }
+  .grid-2{
+    display:grid; grid-template-columns:1fr 1fr; gap:14px;
+    margin-bottom:24px;
+  }
+  .stat-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:14px 16px;
+  }
+  .stat-card label{ display:block; font-size:11.5px; color:var(--text-faint); margin-bottom:4px; }
+  .stat-card .value{ font-size:19px; font-weight:600; color:var(--ink); }
+  .stat-card .value.small{ font-size:14px; font-weight:500; }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  thead th{
+    text-align:left; font-size:11.5px; color:var(--text-faint);
+    font-weight:500; padding:0 10px 8px; border-bottom:1px solid var(--line);
+  }
+  tbody td{
+    padding:11px 10px; border-bottom:1px solid var(--line); color:var(--text);
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+  .chan-icon{ display:inline-flex; align-items:center; gap:7px; }
+  .dot{ width:7px;height:7px;border-radius:50%; flex-shrink:0; }
+  .dot.voice{ background:var(--teal); }
+  .dot.chat{ background:#5C7FE0; }
+  .dot.email{ background:var(--amber); }
+
+  .badge{
+    display:inline-block; font-size:11px; font-weight:600;
+    padding:3px 9px; border-radius:20px;
+  }
+  .badge.resolved{ background:#E4F3EA; color:var(--success); }
+  .badge.open{ background:#FBEAEA; color:var(--danger); }
+  .badge.pending{ background:#FCF0DD; color:#9E6A14; }
+
+  .note-form{ display:flex; gap:10px; margin-bottom:18px; }
+  .note-form textarea{
+    flex:1; resize:none; min-height:62px;
+    border:1px solid var(--line); border-radius:7px;
+    padding:10px 12px; font-family:inherit; font-size:13px;
+    color:var(--text);
+  }
+  .note-form textarea:focus{ border-color:var(--teal); }
+  .btn-primary{
+    background:var(--teal); color:#fff; border:none;
+    padding:10px 16px; border-radius:7px; font-weight:600; font-size:13px;
+    align-self:flex-end; transition:background .15s ease;
+  }
+  .btn-primary:hover{ background:var(--teal-dark); }
+
+  .note-item{
+    border:1px solid var(--line); border-radius:8px;
+    padding:12px 14px; margin-bottom:10px; background:var(--panel);
+  }
+  .note-item .meta{ font-size:11.5px; color:var(--text-faint); margin-bottom:5px; }
+  .note-item .meta b{ color:var(--text-soft); }
+  .note-item p{ margin:0; font-size:13px; }
+
+  .case-row{
+    display:flex; align-items:center; justify-content:space-between;
+    border:1px solid var(--line); border-radius:8px;
+    padding:13px 16px; margin-bottom:10px; background:var(--panel);
+  }
+  .case-row .left b{ display:block; font-size:13.5px; margin-bottom:3px; }
+  .case-row .left span{ font-size:12px; color:var(--text-faint); }
+  .case-actions{ display:flex; align-items:center; gap:12px; }
+  .link-btn{
+    border:none; background:none; color:var(--teal); font-size:12.5px;
+    font-weight:600;
+  }
+  .link-btn:hover{ text-decoration:underline; }
+
+  .new-case-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    border:1px solid var(--teal); color:var(--teal); background:none;
+    padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:600;
+    margin-bottom:16px;
+  }
+  .new-case-btn:hover{ background:rgba(27,154,160,.08); }
+
+  /* ---------- toast ---------- */
+  .toast{
+    position:fixed; bottom:22px; left:50%;
+    transform:translateX(-50%) translateY(12px);
+    background:var(--ink); color:#fff;
+    padding:11px 20px; border-radius:7px;
+    font-size:13px; font-weight:500;
+    opacity:0; pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+    z-index:50;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (max-width:680px){
+    .customer-panel{ width:200px; padding:16px 14px; }
+    .grid-2{ grid-template-columns:1fr; }
+    .panel-body{ padding:16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- status bar: mirrors what the Genesys Cloud Client App SDK would push in -->
+  <div class="statusbar">
+    <div class="left">
+      <div class="pulse-dot" id="pulseDot"></div>
+      <div class="status-text" id="statusText">No active interaction</div>
+    </div>
+    <div class="meta" id="statusMeta" style="display:none;">
+      <span>Queue: <b id="metaQueue">—</b></span>
+      <span>Channel: <b id="metaChannel">—</b></span>
+      <span>Wait: <b id="metaWait">—</b></span>
+    </div>
+    <button class="sim-btn" id="simBtn">Simulate incoming call</button>
+  </div>
+
+  <div class="main">
+
+    <!-- customer identity panel -->
+    <aside class="customer-panel" id="customerPanel">
+      <div class="empty-state" id="emptyState">
+        <div class="glyph">＋</div>
+        <p>Customer details will appear here automatically when an interaction arrives.</p>
+      </div>
+
+      <div id="customerContent" style="display:none;">
+        <div class="avatar" id="avatarInitials">—</div>
+        <h3 class="cust-name" id="custName">—</h3>
+        <p class="cust-sub" id="custAccountId">—</p>
+        <div class="tier-badge tier-gold" id="tierBadge">Gold tier</div>
+
+        <div class="field-list">
+          <div class="field"><label>Phone</label><div class="val" id="custPhone">—</div></div>
+          <div class="field"><label>Email</label><div class="val" id="custEmail">—</div></div>
+          <div class="field"><label>Region</label><div class="val" id="custRegion">—</div></div>
+          <div class="field"><label>Preferred language</label><div class="val" id="custLang">—</div></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="quick-actions">
+          <div class="qa-label">Quick actions</div>
+          <button class="qa-btn" data-action="dial"><span class="qa-icon">↻</span> Click to dial</button>
+          <button class="qa-btn" data-action="sms"><span class="qa-icon">✉</span> Send SMS</button>
+          <button class="qa-btn" data-action="email"><span class="qa-icon">⤷</span> Send email</button>
+          <button class="qa-btn" data-action="callback"><span class="qa-icon">◷</span> Schedule callback</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- tabbed content -->
+    <section class="content">
+      <nav class="tabs">
+        <button class="tab active" data-tab="overview">Overview</button>
+        <button class="tab" data-tab="history">Interaction history</button>
+        <button class="tab" data-tab="notes">Notes</button>
+        <button class="tab" data-tab="cases">Cases</button>
+      </nav>
+
+      <!-- overview -->
+      <div class="panel-body" id="tab-overview">
+        <h2 class="section-title">Account summary</h2>
+        <div class="grid-2">
+          <div class="stat-card"><label>Open balance</label><div class="value">₹4,280.00</div></div>
+          <div class="stat-card"><label>Account standing</label><div class="value small">Good standing</div></div>
+          <div class="stat-card"><label>Customer since</label><div class="value small" id="custSince">—</div></div>
+          <div class="stat-card"><label>Last contact</label><div class="value small">14 Sep 2026 · Voice</div></div>
+        </div>
+        <h2 class="section-title">Current interaction context</h2>
+        <p style="color:var(--text-soft); font-size:13px; max-width:460px;">
+          This section reflects the live context object delivered by the Client App SDK —
+          ANI, queue, selected IVR options, and any attached participant data — so the agent
+          sees why the call landed here without asking the customer to repeat themselves.
+        </p>
+      </div>
+
+      <!-- history -->
+      <div class="panel-body hidden" id="tab-history">
+        <h2 class="section-title">Past interactions</h2>
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Channel</th><th>Duration</th><th>Agent</th><th>Disposition</th></tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+
+      <!-- notes -->
+      <div class="panel-body hidden" id="tab-notes">
+        <h2 class="section-title">Notes</h2>
+        <div class="note-form">
+          <textarea id="noteInput" placeholder="Log what happened on this interaction…"></textarea>
+          <button class="btn-primary" id="addNoteBtn">Save note</button>
+        </div>
+        <div id="notesList"></div>
+      </div>
+
+      <!-- cases -->
+      <div class="panel-body hidden" id="tab-cases">
+        <h2 class="section-title">Cases</h2>
+        <button class="new-case-btn" id="newCaseBtn">＋ Create case</button>
+        <div id="casesList"></div>
+      </div>
+
+    </section>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   SAMPLE CRM — embeddable via the Genesys Cloud Client Application
+   framework (iframe-based "Client App" rendered inside the agent
+   desktop). This file is self-contained demo/mock data; wire the
+   marked section below to your real CRM API and the Genesys Cloud
+   Client App SDK before shipping.
+   ===================================================================== */
+
+// ---- mock "CRM" customer records, keyed by phone number (ANI) ----
+const CUSTOMERS = {
+  "+919876543210": {
+    name: "Meera Raghavan",
+    accountId: "ACC-883291",
+    phone: "+91 98765 43210",
+    email: "meera.raghavan@example.com",
+    region: "Chennai, India",
+    lang: "English / Tamil",
+    since: "Mar 2021",
+    tier: "Gold",
+    history: [
+      { date: "14 Sep 2026", channel: "voice", duration: "6m 12s", agent: "A. Fernandes", disp: "resolved" },
+      { date: "02 Aug 2026", channel: "chat",  duration: "11m 40s", agent: "R. Iyer",     disp: "resolved" },
+      { date: "19 Jun 2026", channel: "email", duration: "—",       agent: "S. Rao",      disp: "pending" }
+    ],
+    cases: [
+      { title: "Billing discrepancy — July invoice", status: "open",   updated: "2 days ago" },
+      { title: "Address change request",            status: "resolved", updated: "3 weeks ago" }
+    ]
+  }
+};
+
+let notes = [
+  { author: "A. Fernandes", time: "14 Sep 2026, 10:42", text: "Confirmed refund eligibility, escalated to billing team." }
+];
+
+// ---- tab switching ----
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.panel-body').forEach(p => p.classList.add('hidden'));
+    document.getElementById('tab-' + tab.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// ---- toast helper ----
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ---- quick action buttons (placeholder behavior for the demo) ----
+document.querySelectorAll('.qa-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const labels = { dial: "Dialing customer…", sms: "SMS composer opened", email: "Email composer opened", callback: "Callback scheduler opened" };
+    showToast(labels[btn.dataset.action] || "Action triggered");
+  });
+});
+
+// ---- render a customer into the identity panel ----
+function renderCustomer(cust){
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('customerContent').style.display = 'block';
+
+  const initials = cust.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('avatarInitials').textContent = initials;
+  document.getElementById('custName').textContent = cust.name;
+  document.getElementById('custAccountId').textContent = cust.accountId;
+  document.getElementById('tierBadge').textContent = cust.tier + ' tier';
+  document.getElementById('custPhone').textContent = cust.phone;
+  document.getElementById('custEmail').textContent = cust.email;
+  document.getElementById('custRegion').textContent = cust.region;
+  document.getElementById('custLang').textContent = cust.lang;
+  document.getElementById('custSince').textContent = cust.since;
+
+  // history table
+  const hBody = document.getElementById('historyBody');
+  hBody.innerHTML = cust.history.map(h => `
+    <tr>
+      <td>${h.date}</td>
+      <td><span class="chan-icon"><span class="dot ${h.channel}"></span>${h.channel[0].toUpperCase() + h.channel.slice(1)}</span></td>
+      <td>${h.duration}</td>
+      <td>${h.agent}</td>
+      <td><span class="badge ${h.disp}">${h.disp[0].toUpperCase() + h.disp.slice(1)}</span></td>
+    </tr>`).join('');
+
+  // cases
+  renderCases(cust.cases);
+}
+
+function renderCases(cases){
+  document.getElementById('casesList').innerHTML = cases.map(c => `
+    <div class="case-row">
+      <div class="left">
+        <b>${c.title}</b>
+        <span>Updated ${c.updated}</span>
+      </div>
+      <div class="case-actions">
+        <span class="badge ${c.status}">${c.status[0].toUpperCase() + c.status.slice(1)}</span>
+        <button class="link-btn">Open</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderNotes(){
+  document.getElementById('notesList').innerHTML = notes.map(n => `
+    <div class="note-item">
+      <div class="meta"><b>${n.author}</b> · ${n.time}</div>
+      <p>${n.text}</p>
+    </div>`).join('');
+}
+renderNotes();
+
+document.getElementById('addNoteBtn').addEventListener('click', () => {
+  const input = document.getElementById('noteInput');
+  if (!input.value.trim()) return;
+  notes.unshift({ author: "You", time: "Just now", text: input.value.trim() });
+  input.value = '';
+  renderNotes();
+  showToast("Note saved");
+});
+
+document.getElementById('newCaseBtn').addEventListener('click', () => {
+  showToast("Create-case form opened (wire to your case-management API)");
+});
+
+// ---- interaction context: how an incoming conversation screen-pops the panel ----
+function handleIncomingInteraction({ ani, queue, channel, waitSeconds }){
+  document.getElementById('pulseDot').classList.add('live');
+  document.getElementById('statusText').innerHTML = `Active interaction from <strong>${ani}</strong>`;
+  document.getElementById('statusMeta').style.display = 'flex';
+  document.getElementById('metaQueue').textContent = queue;
+  document.getElementById('metaChannel').textContent = channel;
+  document.getElementById('metaWait').textContent = waitSeconds + 's';
+
+  const match = CUSTOMERS[ani];
+  if (match) {
+    renderCustomer(match);
+    showToast("Customer matched — profile loaded");
+  } else {
+    showToast("No CRM match for this number");
+  }
+}
+
+// demo trigger button — stands in for a real inbound interaction event
+document.getElementById('simBtn').addEventListener('click', () => {
+  handleIncomingInteraction({
+    ani: "+919876543210",
+    queue: "Billing — EMEA",
+    channel: "Voice",
+    waitSeconds: 42
+  });
+});
+
+/* =====================================================================
+   REAL INTEGRATION NOTES (replace the simulate button above with this)
+   =====================================================================
+
+   1. Load the Genesys Cloud Client App SDK in this page:
+
+        <script src="https://sdk-cdn.mypurecloud.com/client-apps/CURRENT_VERSION/client-app-sdk.js"></script>
+
+      Check the current version/URL in the Genesys Developer Center
+      before shipping — pin a version rather than tracking "latest".
+
+   2. Initialize it once the SDK script has loaded:
+
+        const ClientApp = window.purecloud.apps.ClientApp;
+        const myClientApp = new ClientApp({ gcHostOriginQueryParam: 'gcHostOrigin' });
+
+   3. Subscribe to alerting/connected conversations and map the ANI
+      or participant data to your real CRM lookup (replace the
+      CUSTOMERS object above with an actual fetch() call):
+
+        myClientApp.alerting.subscribe(/* conversation topic * /)
+          .then(conversation => {
+            const ani = conversation.participants?.[0]?.address;
+            fetchCustomerFromCRM(ani).then(renderCustomer);
+          });
+
+   4. This page must be served over HTTPS and registered as a
+      Client Application (Admin > Integrations > Client Apps) with
+      this URL, with "Allow framing" / CSP configured so Genesys
+      Cloud can embed it as an iframe inside the agent workspace.
+
+   5. If you also need Data Actions to pull case/account data at
+      runtime (as discussed earlier), remember Data Actions run on
+      Client Credentials only — any endpoint requiring a user
+      context won't work there. Keep CRM lookups like this one in
+      the Client App itself (which runs with real user context),
+      and reserve Data Actions for client-credentials-safe calls
+      inside Architect flows.
+   ===================================================================== */
+</script>
+
+</body>
+</html>
